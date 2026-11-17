@@ -5,9 +5,12 @@
 #include <string.h>
 
 static GPIO_TypeDef gpio_a, gpio_b;
+static SPI_TypeDef spi_instance;
+static SPI_HandleTypeDef pot_spi;
 static char calls[128];
 static unsigned call_count, fail_on_call;
 static uint32_t last_frequency;
+static uint16_t last_position;
 
 // 记录部件调用顺序，并模拟指定步骤超时。
 static HAL_StatusTypeDef record_call(char operation)
@@ -43,6 +46,35 @@ HAL_StatusTypeDef ad9833_init(ad9833_t *dev, const ad9833_init_t *config)
     dev->control_word = 0x2100U | config->initial_waveform;
     dev->initialized = true;
     return HAL_OK;
+}
+
+// 模拟MCP4151初始化。
+HAL_StatusTypeDef mcp4151_init(mcp4151_t *dev, const mcp4151_init_t *config)
+{
+    assert(dev != NULL && config != NULL);
+    assert(config->hspi == &pot_spi && config->cs_port == &gpio_b);
+    assert(config->cs_pin == 2U && config->initial_position <= MCP4151_MAX_POSITION);
+    HAL_StatusTypeDef status = record_call('P');
+    dev->initialized = status == HAL_OK;
+    if (status == HAL_OK) {
+        dev->hspi = config->hspi;
+        dev->cs_port = config->cs_port;
+        dev->cs_pin = config->cs_pin;
+        dev->position = config->initial_position;
+    }
+    return status;
+}
+
+// 模拟MCP4151位置发送，失败时不更新位置。
+HAL_StatusTypeDef mcp4151_set_position(mcp4151_t *dev, uint16_t position)
+{
+    assert(dev != NULL && dev->initialized);
+    HAL_StatusTypeDef status = record_call('R');
+    if (status == HAL_OK) {
+        last_position = position;
+        dev->position = position;
+    }
+    return status;
 }
 
 // 模拟开始输出。
@@ -105,9 +137,17 @@ static void expect_calls(const char *expected)
 int main(void)
 {
     ad9833_t dds = {0};
+    mcp4151_t pot = {0};
     global_t global = {0};
+    pot_spi.Instance = &spi_instance;
+    pot_spi.State = HAL_SPI_STATE_READY;
     app_init_t config = {
         .dds_src = &dds,
+        .pot_src = &pot,
+        .pot_init = {
+            .hspi = &pot_spi, .cs_port = &gpio_b,
+            .cs_pin = 2U, .initial_position = 128U
+        },
         .dds_init = {
             .sclk_port = &gpio_a, .sclk_pin = 0x20U,
             .sdata_port = &gpio_a, .sdata_pin = 0x80U,
@@ -135,9 +175,10 @@ int main(void)
     expect_calls("");
 
     assert(app_init(&global, &config) == HAL_OK);
-    expect_calls("I");
+    expect_calls("IP");
     assert(global.state == APP_IDLE && global.last_error == HAL_OK);
     assert(global.dds_src == &dds && dds.frequency_hz == 100000U);
+    assert(global.pot_src == &pot && pot.initialized && pot.position == 128U);
     assert(dds.waveform == AD9833_WAVE_TRIANGLE && dds.control_word == 0x2102U);
 
     config.dds_init.initial_frequency_hz = 200000U;
@@ -185,7 +226,7 @@ int main(void)
     expect_calls("");
 
     assert(app_init(&global, &config) == HAL_OK);
-    expect_calls("I");
+    expect_calls("IP");
     assert(global.state == APP_IDLE && dds.frequency_hz == 200000U);
     assert(dds.waveform == AD9833_WAVE_SINE && global.last_error == HAL_OK);
     fail_on_call = 1U;
@@ -198,7 +239,7 @@ int main(void)
     expect_calls("I");
     assert(global.state == APP_ERROR && !dds.initialized);
     assert(app_init(&global, &config) == HAL_OK);
-    expect_calls("I");
+    expect_calls("IP");
     assert(app_start(&global) == HAL_OK);
     expect_calls("S");
     fail_on_call = 1U;
@@ -207,6 +248,19 @@ int main(void)
     assert(global.state == APP_ERROR && global.last_error == HAL_TIMEOUT);
     assert(dds.frequency_hz == 200000U && dds.waveform == AD9833_WAVE_SINE);
 
-    puts("APP初始化参数、状态管理、换频恢复及故障处理测试通过。");
+    assert(app_init(&global, &config) == HAL_OK);
+    expect_calls("IP");
+    assert(app_set_mcp4151_position(&global, 64U) == HAL_OK);
+    expect_calls("R");
+    assert(last_position == 64U && pot.position == 64U);
+    fail_on_call = 1U;
+    assert(app_set_mcp4151_position(&global, 192U) == HAL_TIMEOUT);
+    expect_calls("R");
+    assert(global.state == APP_IDLE && pot.position == 64U);
+    assert(app_set_mcp4151_position(&global, 192U) == HAL_OK);
+    expect_calls("R");
+    assert(last_position == 192U && pot.position == 192U);
+
+    puts("APP初始化参数、状态管理、换频恢复、电位器写入及故障处理测试通过。");
     return 0;
 }

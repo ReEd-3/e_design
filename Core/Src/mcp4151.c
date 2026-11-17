@@ -23,9 +23,6 @@ static HAL_StatusTypeDef mcp4151_write_word(mcp4151_t *dev, uint16_t word)
             break;
         }
     }
-    if (status != HAL_OK && status != HAL_BUSY) {
-        dev->initialized = false;
-    }
     return status;
 }
 
@@ -68,7 +65,7 @@ HAL_StatusTypeDef mcp4151_init(mcp4151_t *dev, const mcp4151_init_t *config)
     return status;
 }
 
-// 写入完整位置命令，非法参数或发送失败时不更新位置记录。
+// 写入完整位置命令，发送失败时保留位置记录并允许后续再次发送。
 HAL_StatusTypeDef mcp4151_set_position(mcp4151_t *dev, uint16_t position)
 {
     if (dev == NULL || !dev->initialized || position > MCP4151_MAX_POSITION) {

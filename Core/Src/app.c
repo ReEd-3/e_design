@@ -38,7 +38,7 @@ HAL_StatusTypeDef app_init(global_t *global, const app_init_t *config)
         global->last_error = HAL_BUSY;
         return HAL_BUSY;
     }
-    if (config == NULL || config->dds_src == NULL) {
+    if (config == NULL || config->dds_src == NULL || config->pot_src == NULL) {
         if (global->state != APP_ERROR) {
             global->last_error = HAL_ERROR;
         }
@@ -46,8 +46,14 @@ HAL_StatusTypeDef app_init(global_t *global, const app_init_t *config)
     }
 
     global->dds_src = config->dds_src;
+    global->pot_src = config->pot_src;
     global->state = APP_UNINITIALIZED;
     HAL_StatusTypeDef status = ad9833_init(global->dds_src, &config->dds_init);
+    if (status != HAL_OK) {
+        return app_set_error(global, status);
+    }
+
+    status = mcp4151_init(global->pot_src, &config->pot_init);
     if (status != HAL_OK) {
         return app_set_error(global, status);
     }
@@ -144,4 +150,16 @@ HAL_StatusTypeDef app_set_dds_waveform(global_t *global, ad9833_waveform_t wavef
     }
     global->last_error = HAL_OK;
     return HAL_OK;
+}
+
+// 设置电位器位置，失败后保留APP启停状态以便后续调用重发。
+HAL_StatusTypeDef app_set_mcp4151_position(global_t *global, uint16_t position)
+{
+    if (global == NULL || global->pot_src == NULL || !global->pot_src->initialized) {
+        return HAL_ERROR;
+    }
+
+    HAL_StatusTypeDef status = mcp4151_set_position(global->pot_src, position);
+    global->last_error = status;
+    return status;
 }

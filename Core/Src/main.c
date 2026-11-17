@@ -91,9 +91,17 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
   ad9833_t dds_src = {0};
+  mcp4151_t pot_src = {0};
   global_t global = {0};
   const app_init_t config = {
     .dds_src = &dds_src,
+    .pot_src = &pot_src,
+    .pot_init = {
+      .hspi = &hspi1,
+      .cs_port = POT_CS_GPIO_Port,
+      .cs_pin = POT_CS_Pin,
+      .initial_position = 256U
+    },
     .dds_init = {
       .sclk_port = DDS_SCLK_GPIO_Port,
       .sclk_pin = DDS_SCLK_Pin,
@@ -102,7 +110,7 @@ int main(void)
       .cs_port = DDS_CS_GPIO_Port,
       .cs_pin = DDS_CS_Pin,
       .mclk_hz = 25000000U,
-      .initial_frequency_hz = 100000U,
+      .initial_frequency_hz = 10000U,
       .initial_waveform = AD9833_WAVE_SINE
     }
   };
@@ -118,6 +126,7 @@ int main(void)
   if (app_start(&global) != HAL_OK) {
     Error_Handler();
   }
+  app_set_mcp4151_position(&global, 128U);
 
   /* USER CODE END 2 */
 

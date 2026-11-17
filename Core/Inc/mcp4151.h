@@ -29,7 +29,7 @@ typedef struct {
 // 按初始化参数绑定接口并写入初始位置，使用前须完成MX配置。
 HAL_StatusTypeDef mcp4151_init(mcp4151_t *dev, const mcp4151_init_t *config);
 
-// 写入滑动端位置，超时或错误自动重发一次，仍失败则须重新初始化。
+// 写入滑动端位置，失败保留旧位置记录，后续可再次发送。
 HAL_StatusTypeDef mcp4151_set_position(mcp4151_t *dev, uint16_t position);
 
 #ifdef __cplusplus

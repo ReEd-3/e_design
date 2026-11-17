@@ -2,6 +2,7 @@
 #define APP_H
 
 #include "ad9833.h"
+#include "mcp4151.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -17,10 +18,13 @@ typedef enum {
 typedef struct {
     ad9833_t *dds_src;       // 由调用者提供的DDS对象
     ad9833_init_t dds_init;  // 驱动层定义的DDS初始化参数
+    mcp4151_t *pot_src;       // 由调用者提供的电位器对象
+    mcp4151_init_t pot_init;  // 驱动层定义的电位器初始化参数
 } app_init_t;
 
 typedef struct {
     ad9833_t *dds_src;         // 应用管理的DDS对象
+    mcp4151_t *pot_src;        // 应用管理的电位器对象
     app_state_t state;         // 应用工作状态
     HAL_StatusTypeDef last_error; // 最近操作结果，错误状态下保留故障原因
 } global_t;
@@ -39,6 +43,9 @@ HAL_StatusTypeDef app_set_dds_frequency(global_t *global, uint32_t frequency_hz)
 
 // 修改输出波形并保留启停状态。
 HAL_StatusTypeDef app_set_dds_waveform(global_t *global, ad9833_waveform_t waveform);
+
+// 设置电位器位置，通信失败不改变APP运行状态，可在后续调用中再次发送。
+HAL_StatusTypeDef app_set_mcp4151_position(global_t *global, uint16_t position);
 
 #ifdef __cplusplus
 }

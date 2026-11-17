@@ -156,22 +156,22 @@ int main(void)
     expect_position(&dev, 127U);
     assert(frame_count == before + 2U);
 
-    // 连续两次超时才判定失效。
+    // 连续两次超时返回失败，但仍允许后续再次发送。
     before = frame_count;
     next_status = HAL_TIMEOUT;
     fail_attempts = 2U;
     assert(mcp4151_set_position(&dev, 0U) == HAL_TIMEOUT);
     assert(frame_count == before + 2U);
-    assert(!dev.initialized && dev.position == 127U && cs.levels == CS_PIN);
+    assert(dev.initialized && dev.position == 127U && cs.levels == CS_PIN);
 
-    before = frame_count;
-    assert(mcp4151_set_position(&dev, 0U) == HAL_ERROR);
-    assert(frame_count == before);
+    next_status = HAL_OK;
+    assert(mcp4151_set_position(&dev, 0U) == HAL_OK);
+    expect_position(&dev, 0U);
     config.initial_position = 32U;
     next_status = HAL_TIMEOUT;
     fail_attempts = 2U;
     assert(mcp4151_init(&dev, &config) == HAL_TIMEOUT);
-    assert(!dev.initialized && dev.position == 127U && cs.levels == CS_PIN);
+    assert(!dev.initialized && dev.position == 0U && cs.levels == CS_PIN);
 
     // 初始化首帧失败可由重发救回。
     next_status = HAL_ERROR;
@@ -185,7 +185,7 @@ int main(void)
     next_status = HAL_ERROR;
     fail_attempts = 2U;
     assert(mcp4151_set_position(&dev, 0U) == HAL_ERROR);
-    assert(!dev.initialized && dev.position == 256U && cs.levels == CS_PIN);
+    assert(dev.initialized && dev.position == 256U && cs.levels == CS_PIN);
     config.initial_position = 0U;
     assert(mcp4151_init(&dev, &config) == HAL_OK);
     expect_position(&dev, 0U);
