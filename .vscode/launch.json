@@ -1,0 +1,28 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "stlinkgdbtarget",
+            "request": "launch",
+            "name": "STM32: Debug e_design",
+            "origin": "snippet",
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "CMake: Build Debug",
+            "preBuild": "",
+            "runEntry": "main",
+            "deviceName": "STM32F407VE",
+            "deviceCore": "Cortex-M4",
+            "gdb": "/home/lw3/.local/share/stm32cube/bundles/gnu-gdb-for-stm32/14.3.1+st.2/bin/arm-none-eabi-gdb",
+            "serverExe": "ST-LINK_gdbserver",
+            "serverCwd": "/home/lw3/.local/share/stm32cube/bundles/stlink-gdbserver/7.14.0+st.2/bin",
+            "serverCubeProgPath": "/home/lw3/.local/share/stm32cube/bundles/programmer/2.23.0/bin",
+            "serverInterface": "SWD",
+            "imagesAndSymbols": [
+                {
+                    "imageFileName": "${workspaceFolder}/build/Debug/e_design.elf",
+                    "symbolFileName": "${workspaceFolder}/build/Debug/e_design.elf"
+                }
+            ]
+        }
+    ]
+}

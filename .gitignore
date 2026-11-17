@@ -1,0 +1,19 @@
+build
+MDK-ARM/build
+mx.scratch
+!.settings
+
+# 编译与调试产物
+*.o
+*.d
+*.elf
+*.map
+*.hex
+*.bin
+*.axf
+*.lst
+*.crf
+*.dep
+*.su
+*.uvguix.*
+*.build_log.htm
